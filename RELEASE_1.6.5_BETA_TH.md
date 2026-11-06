@@ -1,0 +1,1 @@
+Build21: retain image disk cache up to 500 files /128 MiB, update access recency, reuse cached URL without age-based redownload. Android may evict cache under storage pressure. Same URL serves cached image until eviction or app cache cleared. Build/signature verified; device test pending.

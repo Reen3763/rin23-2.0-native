@@ -1,0 +1,73 @@
+name: Build APK (native, arm64)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: aapt2 + javac + R8 + apksigner (arm64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Show version
+        run: |
+          grep -E 'NAME=|CODE=' app/src/main/java/com/rin23/app/AppVersion.java
+
+      - name: Install platform 35 + build-tools 35.0.0
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "SDK=$SDK"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Prepare keystore
+        env:
+          KS_B64: ${{ secrets.RIN23_KEYSTORE_B64 }}
+          KS_ALIAS: ${{ secrets.RIN23_KEY_ALIAS }}
+          KS_PASS: ${{ secrets.RIN23_STORE_PASSWORD }}
+        run: |
+          KS="$RUNNER_TEMP/signing.p12"
+          if [ -n "$KS_B64" ]; then
+            printf '%s' "$KS_B64" | base64 -d > "$KS"
+            PASS="$KS_PASS"
+            echo "KS_SOURCE=owner" >> "$GITHUB_ENV"
+          else
+            PASS="$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32)"
+            keytool -genkeypair -keystore "$KS" -storetype PKCS12 -alias rin23 \
+              -keyalg RSA -keysize 4096 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=Rin23, O=Rin23, C=TH"
+            echo "KS_SOURCE=generated" >> "$GITHUB_ENV"
+          fi
+          chmod 600 "$KS"
+          echo "::add-mask::$PASS"
+          echo "RIN23_KEYSTORE=$KS" >> "$GITHUB_ENV"
+          echo "RIN23_KEY_ALIAS=${KS_ALIAS:-rin23}" >> "$GITHUB_ENV"
+          echo "RIN23_STORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
+          keytool -list -keystore "$KS" -storepass "$PASS" -alias "${KS_ALIAS:-rin23}"
+
+      - name: Build + sign APK
+        run: |
+          RIN23_ANDROID_SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}" bash build-apk.sh
+
+      - name: Collect APK
+        run: |
+          ls -lh build/*.apk
+          mkdir -p out
+          cp build/Rin23-v*-arm64.apk "out/Rin23-$(date -u +%Y%m%d)-$(echo '${{ env.KS_SOURCE }}')-arm64.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rin23-native-apk-arm64
+          path: out/*.apk
+          if-no-files-found: error

@@ -1,0 +1,11 @@
+Rin23 Android uses the user-supplied rustcoin-android-arm64 v1.2.0 executable.
+Upstream source: https://codeberg.org/applemeal234912239012/rustcoin.git
+Rin23 app UI and Android integration are separate additions. Original project attribution is retained in this source distribution. The requested user-facing base-tool label is Rin 1.0.0; the bundled original executable is unchanged.
+The user reports permission from the developer to modify and redistribute.
+This app is not affiliated with Mojang or Microsoft.
+
+QR decoding: ZXing core 3.5.3, Copyright ZXing authors, Apache License 2.0.
+https://github.com/zxing/zxing
+License included in third-party/ and APK assets/third-party/.
+Donation request flow was inspected in the user-supplied rin-topup using @riiixch/tmw-voucher 1.0.1 (RIIIXCH, ISC). This Android implementation is Java, uses standard HttpsURLConnection, does not bundle Node.js/curl/npm, and does not include the SDK default transport. Upstream license is retained with the source/APK attribution.
+https://github.com/riiixch/tmw-voucher
