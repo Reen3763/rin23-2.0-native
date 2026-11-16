@@ -31,8 +31,8 @@ final class NewReleaseBadge extends TextView {
   setVisibility(GONE);
  }
 
- void bind(Protocol.Item item) {
-  setVisibility(CatalogClient.isNew(item, System.currentTimeMillis()) ? VISIBLE : GONE);
+ void bind(boolean show) {
+  setVisibility(show ? VISIBLE : GONE);
  }
 
  private int dp(int value) {

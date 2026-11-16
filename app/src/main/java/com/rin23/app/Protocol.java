@@ -7,7 +7,7 @@ import java.util.regex.*;
 public final class Protocol {
  public static final class Item {
   public final int number; public final String title,creator,type; public final boolean available;
-  public String id="",imageUrl="",description=""; public long publishedAt=0; public List<List<String>> contentGroups=new ArrayList<>(); public double rating=-1; public int ratingCount=0; public List<String> screenshots=new ArrayList<>();
+  public String creatorId=""; public String id="",imageUrl="",description=""; public long publishedAt=0; public List<List<String>> contentGroups=new ArrayList<>(); public double rating=-1; public int ratingCount=0; public List<String> screenshots=new ArrayList<>();
   Item(int n,String t,String c,String k,boolean a){number=n;title=t;creator=c;type=k;available=a;}
  }
  public interface Listener {

@@ -60,8 +60,30 @@ public final class EngineService extends Service {
   if(!feed.begin(retry))return;final int generation=catalogGeneration,offset=feed.offset;final String q=lastQuery,f=lastFilter;final boolean sort=latest;
   if(first&&isReady())update("CATALOG","กำลังค้นหาผลงาน…");else changed();
   searchTask=searchIo.submit(()->{if(stopped||generation!=catalogGeneration)return;
-   if(first)try{CatalogClient.Page cached=catalog.cachedSearch(q,f,offset,20,sort);main.post(()->{if(stopped||generation!=catalogGeneration)return;feed.reset();feed.accept(cached.items,cached.total,cached.consumed);feed.loading=true;total=cached.total;revision++;status="แสดงข้อมูลที่บันทึกไว้ • กำลังตรวจรายการใหม่…";changed();});}catch(Exception ignored){}
-   try{CatalogClient.Page result=catalog.search(q,f,offset,20,sort);main.post(()->{if(stopped||generation!=catalogGeneration)return;if(first)feed.reset();feed.accept(result.items,result.total,result.consumed);total=feed.total;page++;latestSorted=result.latest;revision++;if(first&&state.equals("CATALOG"))state="RESULTS";if(isReady())status=total==0?"ไม่พบผลงาน ลองเปลี่ยนคำค้นหรือหมวดหมู่":"สำรวจแล้ว "+items.size()+" จาก "+total+" รายการ";changed();});}catch(Exception e){main.post(()->{if(stopped||generation!=catalogGeneration)return;feed.fail();if(first&&state.equals("CATALOG")){state="RESULTS";status="โหลดผลงานไม่สำเร็จ";}revision++;changed();});}});
+   if(first)try{CatalogClient.Page cached=catalog.cachedSearch(q,f,offset,20,sort);main.post(()->{if(stopped||generation!=catalogGeneration)return;feed.reset();feed.accept(cached.items,cached.total,cached.consumed);rememberLatest(q,f,sort,cached.items);feed.loading=true;total=cached.total;revision++;status="แสดงข้อมูลที่บันทึกไว้ • กำลังตรวจรายการใหม่…";changed();});}catch(Exception ignored){}
+   try{CatalogClient.Page result=catalog.search(q,f,offset,20,sort);main.post(()->{if(stopped||generation!=catalogGeneration)return;if(first)feed.reset();feed.accept(result.items,result.total,result.consumed);if(first)rememberLatest(q,f,sort,result.items);total=feed.total;page++;latestSorted=result.latest;revision++;if(first&&state.equals("CATALOG"))state="RESULTS";if(isReady())status=total==0?"ไม่พบผลงาน ลองเปลี่ยนคำค้นหรือหมวดหมู่":"สำรวจแล้ว "+items.size()+" จาก "+total+" รายการ";changed();});}catch(Exception e){main.post(()->{if(stopped||generation!=catalogGeneration)return;feed.fail();if(first&&state.equals("CATALOG")){state="RESULTS";status="โหลดผลงานไม่สำเร็จ";}revision++;changed();});}});
+ }
+ private void rememberLatest(String query,String kind,boolean latest,List<Protocol.Item> firstPage){
+  if(!query.isEmpty()||!kind.equals("default")||!latest)return;
+  homeLatest.clear();
+  Set<String> seen=new HashSet<>();
+  for(Protocol.Item item:firstPage){
+   if(seen.add(item.id))homeLatest.add(item);
+   if(homeLatest.size()==15)break;
+  }
+ }
+ public boolean showsNewBadge(String id){
+  for(Protocol.Item item:homeLatest)if(item.id.equals(id))return true;
+  return false;
+ }
+ interface CreatorPageCallback {void loaded(CatalogClient.Page page);}
+ void creatorWorks(Protocol.Item creator,int offset,CreatorPageCallback callback){
+  catalogIo.execute(()->{
+   CatalogClient.Page page=null;
+   try{page=catalog.creatorWorks(creator,offset);}catch(Exception ignored){}
+   CatalogClient.Page result=page;
+   main.post(()->{if(!stopped)callback.loaded(result);});
+  });
  }
  public Protocol.Item cachedItem(String id){if(detailCache.containsKey(id))return detailCache.get(id);for(Protocol.Item item:items)if(item.id.equals(id))return item;return null;}
  public DownloadSession.State downloadState(String id){if(session.id.equals(id)&&(session.state()==DownloadSession.State.ACTIVE||session.state()==DownloadSession.State.FAILED))return session.state();for(Download d:downloads)if(d.itemId.equals(id)&&d.complete)return DownloadSession.State.COMPLETE;return DownloadSession.State.IDLE;}
