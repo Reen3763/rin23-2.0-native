@@ -24,20 +24,6 @@ final class ImagePager extends HorizontalScrollView {
  }
 
  private int pendingPage = -1;
- private int lastReportedPage = -1;
- private java.util.function.IntConsumer pageListener;
-
- void onPageSelected(java.util.function.IntConsumer listener){
-  pageListener=listener;
- }
-
- private void reportPage(int selected){
-  if(pageListener!=null&&selected>=0&&selected<pages.size()&&lastReportedPage!=selected){
-   lastReportedPage=selected;
-   pageListener.accept(selected);
-  }
- }
-
 
  private void snapAfterLayout(int page) {
   pendingPage = Math.max(0, Math.min(page, pages.size() - 1));
@@ -65,7 +51,7 @@ final class ImagePager extends HorizontalScrollView {
   }
   showDots();
  }
- private void showDots(){int n=pages.size(),selected=getWidth()>0?Math.round((float)getScrollX()/getWidth()):0;reportPage(selected);StringBuilder s=new StringBuilder();for(int i=0;i<n;i++)s.append(i==selected?"●  ":"○  ");String labels=s.toString().trim();if(!labels.contentEquals(dots.getText()))dots.setText(labels);dots.setContentDescription("รูป "+Math.min(n,selected+1)+" จาก "+n);}
+ private void showDots(){int n=pages.size(),selected=getWidth()>0?Math.round((float)getScrollX()/getWidth()):0;StringBuilder s=new StringBuilder();for(int i=0;i<n;i++)s.append(i==selected?"●  ":"○  ");String labels=s.toString().trim();if(!labels.contentEquals(dots.getText()))dots.setText(labels);dots.setContentDescription("รูป "+Math.min(n,selected+1)+" จาก "+n);}
  @Override public boolean onTouchEvent(MotionEvent e){switch(e.getActionMasked()){case MotionEvent.ACTION_DOWN:startX=e.getX();startY=e.getY();horizontal=false;flung=false;downPage=getWidth()>0?Math.round((float)getScrollX()/getWidth()):0;break;case MotionEvent.ACTION_MOVE:if(Math.abs(e.getX()-startX)>Math.abs(e.getY()-startY)+8){horizontal=true;getParent().requestDisallowInterceptTouchEvent(true);}break;}
   boolean result=super.onTouchEvent(e);if(e.getActionMasked()==MotionEvent.ACTION_UP){int page=getWidth()>0?Math.round((float)getScrollX()/getWidth()):0;if(!flung)post(()->smoothScrollTo(page*getWidth(),0));getParent().requestDisallowInterceptTouchEvent(false);}else if(e.getActionMasked()==MotionEvent.ACTION_CANCEL)getParent().requestDisallowInterceptTouchEvent(false);return result;
  }

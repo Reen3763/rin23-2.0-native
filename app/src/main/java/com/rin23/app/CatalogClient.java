@@ -36,16 +36,7 @@ final class CatalogClient {
   return base+" and tags/any(t: t eq '"+tag+"')";
  }
  Page search(String query,String kind,int skip,int limit,boolean latest)throws Exception{
-  return search(query,kind,skip,limit,latest,filter(kind));
- }
- Page creatorWorks(Protocol.Item creator,int skip)throws Exception{
-  String field=creator.creatorId.isEmpty()?"displayProperties/creatorName":"creatorEntity/id";
-  String value=creator.creatorId.isEmpty()?creator.creator:creator.creatorId;
-  return search("","default",skip,20,true,
-      filter("default")+" and ("+field+" eq '"+value.replace("'","''")+"')");
- }
- private Page search(String query,String kind,int skip,int limit,boolean latest,String catalogFilter)throws Exception{
-  JSONObject body=new JSONObject();body.put("count",true);body.put("filter",catalogFilter);
+  JSONObject body=new JSONObject();body.put("count",true);body.put("filter",filter(kind));
   String normalized=SearchQuery.normalize(query);if(SearchQuery.uuid(normalized)){if(skip>0)return new Page(Collections.emptyList(),1,false,0);Protocol.Item item=details(normalized.toLowerCase(Locale.ROOT));List<Protocol.Item> result=SearchQuery.matchesType(item,kind)?Collections.singletonList(item):Collections.emptyList();return new Page(result,result.size(),false,result.size());}
   String q=SearchQuery.literal(normalized);
   body.put("search",q);body.put("orderBy",latest?"startDate desc":"");body.put("scid","4fc10100-5f7a-4470-899b-280835760c07");body.put("select","contents");body.put("top",limit);body.put("skip",skip);
@@ -65,8 +56,6 @@ final class CatalogClient {
   if(names.contains("skinpack"))type="SkinPack";else if(names.contains("persona_piece")||raw.optString("ContentType").contains("PersonaDurable"))type="Persona";else if(names.contains("worldtemplate"))type="World";else if(names.contains("resourcepack"))type="TexturePack";else if(names.contains("mashup"))type="Mashup";else if(names.contains("addon"))type="Addon";
   String id=raw.optString("Id"),title=localized(raw.opt("Title")),creator=dp==null?"":dp.optString("creatorName");
   Protocol.Item item=new Protocol.Item(number,title.isEmpty()?"ไม่มีชื่อ":title,creator.isEmpty()?"ไม่ระบุผู้สร้าง":creator,type,available.contains(id)||type.equals("SkinPack")||type.equals("Persona"));
-  JSONObject entity=raw.optJSONObject("CreatorEntity");
-  if(entity!=null)item.creatorId=entity.optString("Id","");
   item.id=id;item.publishedAt=releaseTime(raw.optString("StartDate"));
   if(item.publishedAt==0)item.publishedAt=releaseTime(raw.optString("CreationDate"));
   item.updatedAt=releaseTime(raw.optString("LastModifiedDate"));

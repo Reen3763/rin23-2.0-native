@@ -18,8 +18,6 @@ import java.util.*;
 
 public final class MainActivity extends ThemeActivity implements EngineService.Observer {
  private boolean restorePosition;private int restoredScroll;private Button importButton;private TextView importInfo;private boolean relevance=true;private final Map<String,Parcelable> browsePositions=new HashMap<>();private FavoriteStore favorites;private List<Protocol.Item> savedItems=new ArrayList<>();private EditText fileQuery;private String fileFilter="";private LinearLayout fileControls,fileResults;private TextView fileCount;private EngineService service;private boolean bound=false;private String tab="home",filter="default",lastSignature="";private boolean showingSearch=false,latest=true;
- private AlertDialog creatorDialog;
- private BaseAdapter creatorWorksAdapter;
  private LinearLayout homeControls;private EditText query;private LinearLayout results,filterRow;private TextView status;private ProgressBar progress;private Button search,retry;private ListView browser;private PullRefreshLayout pullRefresh;private BrowseAdapter browseAdapter;private TextView feedFooter,transferText;private LinearLayout transferCard;private ProgressBar transferBar;private boolean resetBrowser=true;private ScrollView scroller;private ImageLoader images;private final List<Button> navButtons=new ArrayList<>();
  private final ServiceConnection connection=new ServiceConnection(){public void onServiceConnected(ComponentName n,IBinder b){service=((EngineService.LocalBinder)b).get();bound=true;service.observe(MainActivity.this);}public void onServiceDisconnected(ComponentName n){bound=false;service=null;status.setText("การเชื่อมต่อขาดหาย กรุณาเปิดแอปใหม่");}};
  @Override public void onCreate(Bundle b){super.onCreate(b);if(!AppIntegrity.valid(this)){new AlertDialog.Builder(this).setTitle("ตรวจสอบแอปไม่ผ่าน").setMessage("กรุณาติดตั้ง Rin23 รุ่นที่ลงนามโดยผู้พัฒนาอีกครั้ง").setCancelable(false).setPositiveButton("ปิด",(dialog,which)->finish()).show();return;}images=new ImageLoader(this);try{favorites=Favorites.get(this);savedItems=favorites.items();}catch(Exception e){Toast.makeText(this,"อ่านรายการโปรดไม่ได้ กรุณาลองเปิดแอปใหม่",Toast.LENGTH_LONG).show();}latest=getPreferences(0).getBoolean("latest",true);relevance=getPreferences(0).getBoolean("relevance",true);getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
@@ -33,7 +31,7 @@ public final class MainActivity extends ThemeActivity implements EngineService.O
    chip.setGravity(Gravity.CENTER);
    chip.setPadding(dp(1),dp(7),dp(1),dp(7));
    chip.setIncludeFontPadding(false);
-   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1);if(idx>0)lp.leftMargin=dp(5);filterRow.addView(chip,lp);chip.setOnClickListener(v->{if(service==null||!service.canBrowse())return;filter=option[1];paintFilters();tab="home";showingSearch=!filter.equals("default")||!SearchQuery.normalize(query.getText().toString()).isEmpty();resetBrowser=true;if(showingSearch)service.search(query.getText().toString(),filter,searchNewest(),1);else service.loadHome();});}paintFilters();
+   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1);if(idx>0)lp.leftMargin=dp(5);filterRow.addView(chip,lp);chip.setOnClickListener(v->{if(service==null||!service.canBrowse())return;filter=option[1];paintFilters();tab="home";showingSearch=true;resetBrowser=true;service.search(query.getText().toString(),filter,searchNewest(),1);});}paintFilters();
   progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setIndeterminate(true);progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(RED));homeControls.addView(progress,new LinearLayout.LayoutParams(-1,dp(2)));status=text("กำลังเปิด Rin23…",11,MUTED);status.setPadding(0,dp(8),0,dp(8));homeControls.addView(status);retry=button("เริ่มใหม่",false);retry.setVisibility(View.GONE);homeControls.addView(retry);retry.setOnClickListener(v->{if(service!=null)service.retry();});
   scroller=new ScrollView(this);scroller.setFillViewport(true);scroller.setClipToPadding(false);results=column();results.setPadding(0,dp(4),0,dp(10));scroller.addView(results);root.addView(scroller,new LinearLayout.LayoutParams(-1,0,1));
   fileControls=column();fileControls.setVisibility(View.GONE);TextView filesTitle=text("ดาวน์โหลดของฉัน",24,TEXT);AppIcons.apply(filesTitle,R.drawable.ui_download,RED,24);filesTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD);filesTitle.setPadding(0,dp(12),0,dp(14));fileControls.addView(filesTitle);LinearLayout fileSearchRow=row();fileQuery=new EditText(this);fileQuery.setSingleLine(true);fileQuery.setTextSize(14);fileQuery.setTextColor(TEXT);fileQuery.setHintTextColor(MUTED);fileQuery.setHint("ค้นหาชื่อไฟล์ที่ดาวน์โหลด…");fileQuery.setPadding(dp(14),0,dp(12),0);fileQuery.setBackground(round(PANEL,16));AppIcons.apply(fileQuery,R.drawable.ui_file_search,MUTED,22);fileSearchRow.addView(fileQuery,new LinearLayout.LayoutParams(0,dp(48),1));fileSearchRow.addView(space(8));Button clearFiles=button("",false);clearFiles.setPadding(dp(12),0,dp(12),0);AppIcons.apply(clearFiles,R.drawable.ui_clear_search,TEXT,22);clearFiles.setContentDescription("ล้างคำค้นไฟล์");fileSearchRow.addView(clearFiles,new LinearLayout.LayoutParams(dp(48),dp(48)));clearFiles.setOnClickListener(v->fileQuery.setText(""));fileControls.addView(fileSearchRow);fileCount=text("",11,MUTED);fileCount.setPadding(0,dp(9),0,dp(10));fileControls.addView(fileCount);importButton=button("นำเข้าไฟล์จากเครื่อง",false);AppIcons.apply(importButton,R.drawable.ui_import,TEXT,22);fileControls.addView(importButton,new LinearLayout.LayoutParams(-1,dp(46)));importButton.setOnClickListener(v->pickLocalFile());importInfo=text("รองรับ .mcpack • .mcaddon • .zip",11,MUTED);importInfo.setPadding(0,dp(8),0,dp(10));fileControls.addView(importInfo);root.addView(fileControls,root.indexOfChild(scroller),new LinearLayout.LayoutParams(-1,-2));fileQuery.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence q,int start,int before,int count){fileFilter=q.toString();if(service!=null&&tab.equals("files")&&fileResults!=null){renderFileRows();scroller.scrollTo(0,0);}}public void afterTextChanged(Editable e){}});
@@ -46,17 +44,10 @@ public final class MainActivity extends ThemeActivity implements EngineService.O
   if(b!=null){tab=b.getString("screen","home");filter=b.getString("category","default");showingSearch=b.getBoolean("searching",false);query.setText(b.getString("query",""));fileQuery.setText(b.getString("fileQuery",""));paintFilters();for(String key:new String[]{"home","favorites"}){Parcelable pos=b.getParcelable("position_"+key);if(pos!=null)browsePositions.put(key,pos);}resetBrowser=false;restoredScroll=b.getInt("scroll",0);restorePosition=true;}else if("files".equals(getIntent().getStringExtra("tab")))tab="files";Intent intent=new Intent(this,EngineService.class);startForegroundService(intent);bindService(intent,connection,BIND_AUTO_CREATE);
  }
  private void pickLocalFile(){if(service==null||service.importing)return;Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);try{startActivityForResult(picker,51);}catch(ActivityNotFoundException e){Toast.makeText(this,"ไม่พบแอปเลือกไฟล์",Toast.LENGTH_LONG).show();}}
- @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==52){
-  if(result==RESULT_OK&&data!=null&&data.hasExtra("creator")){
-   Protocol.Item creator=new Protocol.Item(0,"",data.getStringExtra("creator"),"",false);
-   creator.creatorId=Objects.toString(data.getStringExtra("creatorId"),"");
-   openCreator(creator);
-  }
-  return;
- }if(request!=51||result!=RESULT_OK||data==null||data.getData()==null)return;Uri source=data.getData();if(!"content".equals(source.getScheme())||service==null){Toast.makeText(this,"เปิดไฟล์นี้ไม่ได้ กรุณาเลือกใหม่",Toast.LENGTH_LONG).show();return;}String name="Imported Pack.zip";try(android.database.Cursor cursor=getContentResolver().query(source,new String[]{android.provider.OpenableColumns.DISPLAY_NAME},null,null,null)){if(cursor!=null&&cursor.moveToFirst()&&!cursor.isNull(0))name=cursor.getString(0);}catch(Exception ignored){}try{getContentResolver().takePersistableUriPermission(source,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}service.importLocal(source,name);}
+ @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request!=51||result!=RESULT_OK||data==null||data.getData()==null)return;Uri source=data.getData();if(!"content".equals(source.getScheme())||service==null){Toast.makeText(this,"เปิดไฟล์นี้ไม่ได้ กรุณาเลือกใหม่",Toast.LENGTH_LONG).show();return;}String name="Imported Pack.zip";try(android.database.Cursor cursor=getContentResolver().query(source,new String[]{android.provider.OpenableColumns.DISPLAY_NAME},null,null,null)){if(cursor!=null&&cursor.moveToFirst()&&!cursor.isNull(0))name=cursor.getString(0);}catch(Exception ignored){}try{getContentResolver().takePersistableUriPermission(source,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}service.importLocal(source,name);}
  private void randomMenu(){if(service==null||service.randomBusy)return;String[] names={"แอดออน","โลก","สกิน","เท็กซ์เจอร์","ทุกประเภท"};String[] kinds={"addon","world","skin","texture","default"};new AlertDialog.Builder(this).setTitle("วันนี้อยากเล่นอะไร?").setItems(names,(d,n)->{Toast.makeText(this,"กำลังสุ่มผลงาน…",Toast.LENGTH_SHORT).show();service.randomPick(kinds[n],(item,error)->{if(isFinishing()||isDestroyed())return;if(item!=null)showDetails(item);else new AlertDialog.Builder(this).setTitle("ลองสุ่มอีกครั้ง").setMessage(error).setPositiveButton("ตกลง",null).show();});}).setNegativeButton("ยกเลิก",null).show();}
  private void paintFilters(){for(int i=0;i<filterRow.getChildCount();i++){View v=filterRow.getChildAt(i);if(v instanceof Button){Button b=(Button)v;boolean selected=filter.equals(b.getTag());AppIcons.ripple(b,round(selected?SOFT:PANEL,16));b.setTextColor(selected?RED:MUTED);b.setSelected(selected);AppIcons.applyTop(b,new int[]{R.drawable.ui_cube,R.drawable.ui_globe,R.drawable.ui_shirt,R.drawable.ui_grid,R.drawable.ui_filter}[i],selected?RED:MUTED,26);b.setCompoundDrawablePadding(dp(3));}}}
- private void filterMenu(View anchor){PopupMenu menu=new PopupMenu(this,anchor);menu.getMenu().add(0,1,0,"หน้าแรก / ค้นพบ");menu.getMenu().add(0,2,1,"เรียง: ใหม่ล่าสุด");menu.getMenu().add(0,3,2,"เรียง: ค่าเริ่มต้น");menu.getMenu().add(0,4,3,"ดูทุกประเภท");menu.getMenu().add(0,5,4,"เรียง: ตรงคำค้น");menu.setOnMenuItemClickListener(item->{switch(item.getItemId()){case 1:tab="home";showingSearch=false;lastSignature="";resetBrowser=true;filter="default";query.setText("");paintFilters();if(service!=null)service.loadHome();changed();break;case 2:latest=true;relevance=false;doSearch();break;case 3:latest=false;relevance=false;doSearch();break;case 5:relevance=true;doSearch();break;case 4:filter="default";paintFilters();doSearch();break;}getPreferences(0).edit().putBoolean("latest",latest).putBoolean("relevance",relevance).apply();return true;});menu.show();}
+ private void filterMenu(View anchor){PopupMenu menu=new PopupMenu(this,anchor);menu.getMenu().add(0,1,0,"หน้าแรก / ค้นพบ");menu.getMenu().add(0,2,1,"เรียง: ใหม่ล่าสุด");menu.getMenu().add(0,3,2,"เรียง: ค่าเริ่มต้น");menu.getMenu().add(0,4,3,"ดูทุกประเภท");menu.getMenu().add(0,5,4,"เรียง: ตรงคำค้น");menu.setOnMenuItemClickListener(item->{switch(item.getItemId()){case 1:tab="home";showingSearch=false;lastSignature="";resetBrowser=true;if(service!=null)service.loadHome();changed();break;case 2:latest=true;relevance=false;doSearch();break;case 3:latest=false;relevance=false;doSearch();break;case 5:relevance=true;doSearch();break;case 4:filter="default";paintFilters();doSearch();break;}getPreferences(0).edit().putBoolean("latest",latest).putBoolean("relevance",relevance).apply();return true;});menu.show();}
  private void doSearch(){if(service==null||!service.canBrowse())return;tab="home";showingSearch=true;lastSignature="";((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(query.getWindowToken(),0);resetBrowser=true;service.search(query.getText().toString(),filter,searchNewest(),1);}
  private boolean searchNewest(){return SearchQuery.normalize(query.getText().toString()).isEmpty()?latest:!relevance&&latest;}
  @Override public void changed(){if(service==null)return;importButton.setEnabled(!service.importing);importInfo.setText(service.importStatus.isEmpty()?"รองรับ .mcpack • .mcaddon • .zip":service.importStatus);status.setText(service.status);progress.setVisibility(service.isBusy()?View.VISIBLE:View.INVISIBLE);search.setEnabled(service.canBrowse());retry.setVisibility(service.state.equals("ERROR")?View.VISIBLE:View.GONE);
@@ -81,7 +72,7 @@ public final class MainActivity extends ThemeActivity implements EngineService.O
    for(int col=0;col<2;col++){if(col==1)line.addView(space(12));int at=start+col;if(at<data.size())line.addView(itemCard(data.get(at)),new LinearLayout.LayoutParams(0,-2,1));else line.addView(new View(MainActivity.this),new LinearLayout.LayoutParams(0,1,1));}return line;
   }
  }
- private View welcome(){LinearLayout wrap=column();wrap.setPadding(0,dp(5),0,dp(16));if(!service.homeLatest.isEmpty())wrap.addView(featured());FrameLayout banner=new FrameLayout(this);banner.setMinimumHeight(dp(108));banner.setBackground(round(PANEL,18));banner.setClipToOutline(true);ImageView art=new ImageView(this){@Override protected void onSizeChanged(int w,int h,int ow,int oh){super.onSizeChanged(w,h,ow,oh);android.graphics.drawable.Drawable d=getDrawable();if(d!=null){float scale=Math.max((float)w/d.getIntrinsicWidth(),(float)h/d.getIntrinsicHeight());android.graphics.Matrix m=new android.graphics.Matrix();m.setScale(scale,scale);m.postTranslate(w-d.getIntrinsicWidth()*scale,(h-d.getIntrinsicHeight()*scale)/2);setImageMatrix(m);}}};art.setScaleType(ImageView.ScaleType.MATRIX);art.setImageResource(R.drawable.rin_cover);banner.addView(art,new FrameLayout.LayoutParams(-1,-1));View shade=new View(this);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,new int[]{0xf20e0f13,0xd20e0f13,0x250e0f13}));banner.addView(shade,new FrameLayout.LayoutParams(-1,-1));LinearLayout overlay=row();overlay.setPadding(dp(18),dp(22),dp(16),dp(22));LinearLayout copy=column();TextView title=text("สนับสนุน Rin23",16,Color.WHITE);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setLineSpacing(dp(4),1);copy.addView(title);TextView hint=text("สนับสนุนโดยสมัครใจ",11,0xffff8a81);hint.setPadding(0,dp(12),0,0);AppIcons.apply(hint,R.drawable.ui_heart,0xffff8a81,16);copy.addView(hint);overlay.addView(copy,new LinearLayout.LayoutParams(0,-2,1));overlay.addView(space(50));banner.addView(overlay,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER_VERTICAL));banner.setContentDescription("สนับสนุน Rin23");banner.setOnClickListener(v->startActivity(new Intent(this,DonationActivity.class)));wrap.addView(banner,new LinearLayout.LayoutParams(-1,-2));Button discover=button(service!=null&&service.randomBusy?"กำลังสุ่ม…":"สุ่มหาอะไรเล่น",true);discover.setGravity(Gravity.CENTER);
+ private View welcome(){LinearLayout wrap=column();wrap.setPadding(0,dp(5),0,dp(16));FrameLayout banner=new FrameLayout(this);banner.setMinimumHeight(dp(164));banner.setBackground(round(PANEL,18));banner.setClipToOutline(true);ImageView art=new ImageView(this){@Override protected void onSizeChanged(int w,int h,int ow,int oh){super.onSizeChanged(w,h,ow,oh);android.graphics.drawable.Drawable d=getDrawable();if(d!=null){float scale=Math.max((float)w/d.getIntrinsicWidth(),(float)h/d.getIntrinsicHeight());android.graphics.Matrix m=new android.graphics.Matrix();m.setScale(scale,scale);m.postTranslate(w-d.getIntrinsicWidth()*scale,(h-d.getIntrinsicHeight()*scale)/2);setImageMatrix(m);}}};art.setScaleType(ImageView.ScaleType.MATRIX);art.setImageResource(R.drawable.rin_cover);banner.addView(art,new FrameLayout.LayoutParams(-1,-1));View shade=new View(this);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,new int[]{0xf20e0f13,0xd20e0f13,0x250e0f13}));banner.addView(shade,new FrameLayout.LayoutParams(-1,-1));LinearLayout overlay=row();overlay.setPadding(dp(18),dp(22),dp(16),dp(22));LinearLayout copy=column();TextView title=text("คุณสามารถโดเนทกำลังใจให้ Rin23 โดยการกดที่นี่ ขอบคุณครับ",16,Color.WHITE);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setLineSpacing(dp(4),1);copy.addView(title);TextView hint=text("สนับสนุนโดยสมัครใจ",11,0xffff8a81);hint.setPadding(0,dp(12),0,0);AppIcons.apply(hint,R.drawable.ui_heart,0xffff8a81,16);copy.addView(hint);overlay.addView(copy,new LinearLayout.LayoutParams(0,-2,1));overlay.addView(space(50));banner.addView(overlay,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER_VERTICAL));banner.setContentDescription("คุณสามารถโดเนทกำลังใจให้ Rin23 โดยการกดที่นี่ ขอบคุณครับ");banner.setOnClickListener(v->startActivity(new Intent(this,DonationActivity.class)));wrap.addView(banner,new LinearLayout.LayoutParams(-1,-2));Button discover=button(service!=null&&service.randomBusy?"กำลังสุ่ม…":"สุ่มหาอะไรเล่น",true);discover.setGravity(Gravity.CENTER);
   discover.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
   discover.setPadding(dp(48),0,dp(48),0);discover.setEnabled(service!=null&&service.canBrowse()&&!service.randomBusy);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(50));rp.topMargin=dp(14);FrameLayout random=new FrameLayout(this);
   random.addView(discover,new FrameLayout.LayoutParams(-1,-1));
@@ -90,187 +81,11 @@ public final class MainActivity extends ThemeActivity implements EngineService.O
   dicePosition.leftMargin=dp(16);
   random.addView(dice,dicePosition);
   wrap.addView(random,rp);discover.setOnClickListener(v->randomMenu());TextView heading=text("สำรวจผลงาน",18,TEXT);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setPadding(0,dp(20),0,0);wrap.addView(heading);return wrap;}
- private View featured(){
-  List<Protocol.Item> featured=new ArrayList<>();
-  for(Protocol.Item item:service.homeLatest){
-   if(!item.imageUrl.isEmpty())featured.add(item);
-   if(featured.size()==6)break;
-  }
-  LinearLayout section=column();
-  if(featured.isEmpty())return section;
-
-  TextView dots=text("",14,RED);
-  dots.setGravity(Gravity.CENTER);
-  dots.setPadding(0,dp(8),0,dp(10));
-  ImagePager pager=new ImagePager(this,dots);
-  pager.setBackground(round(PANEL,20));
-  pager.setClipToOutline(true);
-  List<ImageView> pages=new ArrayList<>();
-  for(Protocol.Item item:featured){
-   ImageView art=new ImageView(this);
-   art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-   art.setContentDescription(item.title);
-   art.setOnClickListener(v->showDetails(item));
-   images.load(item.imageUrl,art,null);
-   pages.add(art);
-  }
-  section.addView(pager,new LinearLayout.LayoutParams(-1,dp(205)));
-  TextView caption=text("",18,ON_ACCENT);
-  caption.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-  caption.setGravity(Gravity.CENTER);
-  caption.setMaxLines(2);
-  caption.setEllipsize(TextUtils.TruncateAt.END);
-  caption.setPadding(dp(14),dp(12),dp(14),dp(12));
-  AppIcons.ripple(caption,round(RED,14));
-  pager.onPageSelected(index->{
-   Protocol.Item item=featured.get(index);
-   caption.setText(item.title);
-   caption.setOnClickListener(v->showDetails(item));
-  });
-  section.addView(caption,new LinearLayout.LayoutParams(-1,-2));
-  section.addView(dots,new LinearLayout.LayoutParams(-1,-2));
-  pager.pages(pages);
-  return section;
- }
-
- private void openCreator(Protocol.Item creator){
-  if(service==null||!service.canBrowse())return;
-  if(creatorDialog!=null)creatorDialog.dismiss();
-
-  LinearLayout panel=column();
-  panel.setBackgroundColor(BG);
-  panel.setPadding(dp(12),0,dp(12),0);
-  ListView works=new ListView(this);
-  works.setDivider(null);
-  works.setSelector(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
-  works.setVerticalScrollBarEnabled(false);
-  panel.addView(works,new LinearLayout.LayoutParams(-1,
-      Math.min(dp(480),getResources().getDisplayMetrics().heightPixels/2)));
-  Button more=button("โหลดผลงานเพิ่มเติม",false);
-  works.addFooterView(more,null,true);
-
-  List<Protocol.Item> items=new ArrayList<>();
-  BaseAdapter adapter=new BaseAdapter(){
-   public int getCount(){return items.size();}
-   public Object getItem(int position){return items.get(position);}
-   public long getItemId(int position){return position;}
-   public View getView(int position,View old,ViewGroup parent){
-    LinearLayout row=column();
-    row.setPadding(0,0,0,dp(10));
-    row.addView(itemCard(items.get(position)));
-    return row;
-   }
-  };
-  works.setAdapter(adapter);
-  creatorWorksAdapter=adapter;
-  AlertDialog dialog=new AlertDialog.Builder(this).setTitle(creator.creator)
-      .setView(panel).setNegativeButton("ปิด",null).create();
-  creatorDialog=dialog;
-  dialog.setOnDismissListener(d->{if(creatorDialog==dialog){creatorDialog=null;creatorWorksAdapter=null;}});
-  Set<String> seen=new HashSet<>();
-  more.setOnClickListener(new View.OnClickListener(){
-   private int offset;
-   public void onClick(View view){
-    more.setEnabled(false);
-    more.setText("กำลังโหลดผลงาน…");
-    service.creatorWorks(creator,offset,page->{
-     if(!dialog.isShowing()||isDestroyed())return;
-     if(page==null){
-      more.setText("โหลดไม่สำเร็จ • ลองอีกครั้ง");
-      more.setEnabled(true);
-      return;
-     }
-     offset+=page.consumed;
-     for(Protocol.Item item:page.items)if(seen.add(item.id))items.add(item);
-     adapter.notifyDataSetChanged();
-     boolean hasMore=page.consumed>0&&offset<page.total;
-     more.setText(hasMore?"โหลดผลงานเพิ่มเติม":
-         items.isEmpty()?"ไม่พบผลงาน":"แสดงครบ "+items.size()+" ผลงาน");
-     more.setEnabled(hasMore);
-    });
-   }
-  });
-  dialog.show();
-  more.performClick();
- }
-
- private View itemCard(Protocol.Item item) {
-  LinearLayout card = column();
-  GradientDrawable surface = round(PANEL, 20);
-  surface.setStroke(dp(1), BORDER);
-  AppIcons.ripple(card, surface);
-  card.setClipToOutline(true);
-  card.setFocusable(true);
-  card.addView(packCover(item));
-
-  LinearLayout copy = column();
-  copy.setPadding(dp(12), dp(12), dp(12), dp(14));
-  TextView title = text(item.title, 15, TEXT);
-  title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-  title.setMinLines(2);
-  title.setMaxLines(2);
-  title.setLineSpacing(dp(2), 1);
-  title.setEllipsize(TextUtils.TruncateAt.END);
-  copy.addView(title);
-
-  TextView author = text(item.creator, 12, RED);
-  author.setGravity(Gravity.CENTER_VERTICAL);
-  author.setMinHeight(dp(48));
-  if(!item.creator.isEmpty()&&!item.creator.equals("ไม่ระบุผู้สร้าง")){
-   AppIcons.ripple(author,round(PANEL,8));
-   author.setContentDescription("ดูผลงานทั้งหมดของ "+item.creator);
-   author.setOnClickListener(v->openCreator(item));
-  }
-  author.setSingleLine(true);
-  author.setEllipsize(TextUtils.TruncateAt.END);
-  copy.addView(author);
-
-  LinearLayout metadata = row();
-  metadata.setPadding(0, dp(9), 0, 0);
-  TextView category = text(typeLabel(item.type), 11, RED);
-  category.setMaxLines(1);
-  category.setEllipsize(TextUtils.TruncateAt.END);
-  metadata.addView(category, new LinearLayout.LayoutParams(0, -2, 1));
-  if (item.rating >= 0) {
-   TextView score = text(String.format(Locale.ROOT, "%.1f", item.rating), 11, TEXT);
-   AppIcons.apply(score, R.drawable.ui_star, palette.star, 12);
-   score.setContentDescription("คะแนน " + score.getText());
-   metadata.addView(score);
-  }
-  copy.addView(metadata);
-  card.addView(copy);
-  card.setOnClickListener(v -> showDetails(item));
-  return card;
- }
-
- private View packCover(Protocol.Item item) {
-  FrameLayout frame = new FrameLayout(this);
-  frame.addView(cover(item.imageUrl));
-  if (!item.available && !tab.equals("favorites")) {
-   TextView shade = text("ไม่พร้อมใช้งาน รอแป๊บ", 11, Color.WHITE);
-   shade.setGravity(Gravity.CENTER);
-   shade.setPadding(dp(8), dp(8), dp(8), dp(8));
-   shade.setBackgroundColor(0xc4111115);
-   frame.addView(shade, new FrameLayout.LayoutParams(-1, -1));
-  }
-  NewReleaseBadge badge = new NewReleaseBadge(this);
-  badge.bind(service!=null&&service.showsNewBadge(item.id));
-  frame.addView(badge);
-
-  Button save = button("", false);
-  save.setPadding(dp(12), dp(12), dp(12), dp(12));
-  paintFavorite(save, item.id);
-  save.setOnClickListener(v -> toggleFavorite(item));
-  FrameLayout.LayoutParams position =
-      new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP | Gravity.END);
-  position.topMargin = dp(5);
-  position.setMarginEnd(dp(5));
-  frame.addView(save, position);
-  return frame;
- }
+ private View itemCard(Protocol.Item item){LinearLayout c=column();c.setBackground(round(PANEL,20));c.setClipToOutline(true);c.addView(packCover(item));LinearLayout copy=column();copy.setPadding(dp(12),dp(11),dp(12),dp(14));TextView title=text(item.title,14,TEXT);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setMaxLines(2);title.setMinLines(2);title.setLineSpacing(dp(2),1);title.setEllipsize(TextUtils.TruncateAt.END);copy.addView(title);TextView author=text(item.creator,11,MUTED);author.setSingleLine(true);author.setEllipsize(TextUtils.TruncateAt.END);copy.addView(author);TextView type=text(typeLabel(item.type)+rating(item),10,RED);type.setPadding(0,dp(8),0,0);copy.addView(type);c.addView(copy);c.setOnClickListener(v->showDetails(item));return c;}
+ private View packCover(Protocol.Item item){FrameLayout frame=new FrameLayout(this);frame.addView(cover(item.imageUrl));if(!item.available&&!tab.equals("favorites")){TextView shade=text("ไม่พร้อมใช้งาน รอแป๊บ",11,Color.WHITE);shade.setGravity(Gravity.CENTER);shade.setPadding(dp(8),dp(8),dp(8),dp(8));shade.setBackgroundColor(0xc4111115);frame.addView(shade,new FrameLayout.LayoutParams(-1,-1));}if(CatalogClient.isNew(item,System.currentTimeMillis())){TextView badge=text("ใหม่",10,0xff21100f);badge.setTypeface(Typeface.DEFAULT,Typeface.BOLD);badge.setPadding(dp(9),dp(3),dp(9),dp(3));badge.setBackground(round(0xfff0d9a8,7));FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.LEFT);lp.leftMargin=dp(8);lp.topMargin=dp(8);frame.addView(badge,lp);}Button save=button("",false);save.setPadding(dp(10),dp(10),dp(10),dp(10));paintFavorite(save,item.id);save.setOnClickListener(v->toggleFavorite(item));FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(dp(44),dp(44),Gravity.TOP|Gravity.RIGHT);sp.topMargin=dp(5);sp.rightMargin=dp(5);frame.addView(save,sp);return frame;}
  private View favoritesHeader(){LinearLayout wrap=column();wrap.setPadding(0,dp(12),0,dp(16));TextView title=text("รายการโปรด",24,TEXT);AppIcons.apply(title,R.drawable.ui_bookmark_saved,RED,24);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);wrap.addView(title);TextView hint=text(savedItems.isEmpty()?"แตะไอคอนคั่นหน้าบนผลงานเพื่อเก็บไว้ดูภายหลัง":"เก็บไว้แล้ว "+savedItems.size()+" ผลงาน • แตะเพื่อดูรายละเอียด",12,MUTED);hint.setPadding(0,dp(8),0,dp(8));wrap.addView(hint);if(savedItems.isEmpty()){ImageView icon=AppIcons.view(this,R.drawable.ui_bookmark,RED,48);LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(dp(64),dp(64));ip.gravity=Gravity.CENTER_HORIZONTAL;ip.topMargin=dp(32);ip.bottomMargin=dp(16);wrap.addView(icon,ip);}return wrap;}
  private void paintFavorite(Button button,String id){boolean saved=favorites!=null&&favorites.contains(id);AppIcons.apply(button,saved?R.drawable.ui_bookmark_saved:R.drawable.ui_bookmark,saved?RED:TEXT,22);button.setContentDescription(saved?"นำออกจากรายการโปรด":"เก็บในรายการโปรด");button.setEnabled(favorites!=null&&!FavoriteStore.key(id).isEmpty());}
- private void toggleFavorite(Protocol.Item item){if(favorites==null)return;try{boolean saved=favorites.toggle(item);savedItems=favorites.items();browseAdapter.notifyDataSetChanged();if(creatorWorksAdapter!=null)creatorWorksAdapter.notifyDataSetChanged();Toast.makeText(this,saved?"เก็บในรายการโปรดแล้ว":"นำออกจากรายการโปรดแล้ว",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"บันทึกรายการโปรดไม่ได้ กรุณาลองใหม่",Toast.LENGTH_LONG).show();}}
+ private void toggleFavorite(Protocol.Item item){if(favorites==null)return;try{boolean saved=favorites.toggle(item);savedItems=favorites.items();browseAdapter.notifyDataSetChanged();Toast.makeText(this,saved?"เก็บในรายการโปรดแล้ว":"นำออกจากรายการโปรดแล้ว",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"บันทึกรายการโปรดไม่ได้ กรุณาลองใหม่",Toast.LENGTH_LONG).show();}}
  private void renderFiles(){Button folder=button("เปิดโฟลเดอร์ Download/rin23",false);AppIcons.apply(folder,R.drawable.ui_folder,TEXT,20);LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(-1,dp(48));fp.bottomMargin=dp(16);results.addView(folder,fp);folder.setOnClickListener(v->openDownloads());fileResults=column();results.addView(fileResults);renderFileRows();}
  private void renderFileRows(){fileResults.removeAllViews();
   int matches=0;for(EngineService.Download d:service.downloads){if(!FileSearch.matches(d.name,fileFilter))continue;matches++;LinearLayout c=card();if(!d.image.isEmpty()){ImageView cover=cover(d.image);c.addView(cover);}TextView name=text(d.name,15,TEXT);name.setTypeface(Typeface.DEFAULT,Typeface.BOLD);name.setPadding(0,dp(9),0,dp(9));c.addView(name);TextView size=text("ขนาดไฟล์ • "+TransferMeter.bytes(d.size),11,MUTED);size.setPadding(0,0,0,dp(12));c.addView(size);LinearLayout actions=row();Button open=button("เปิดด้วย Minecraft",true),delete=button("ลบไฟล์",false);delete.setTextColor(RED);AppIcons.apply(delete,R.drawable.ui_trash,RED,18);AppIcons.apply(open,R.drawable.ui_cube,ON_ACCENT,18);actions.addView(open,new LinearLayout.LayoutParams(0,dp(44),1));actions.addView(space(8));actions.addView(delete,new LinearLayout.LayoutParams(dp(85),dp(44)));c.addView(actions);open.setOnClickListener(v->openPack(d));delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("ลบไฟล์นี้ถาวร?").setMessage(d.name+"\n\nไฟล์จะถูกลบจาก Download/rin23").setNegativeButton("ยกเลิก",null).setPositiveButton("ลบไฟล์",(dialog,which)->service.deleteDownload(d)).show());fileResults.addView(c);}
@@ -291,10 +106,9 @@ public final class MainActivity extends ThemeActivity implements EngineService.O
  }
  private void settingRow(LinearLayout parent,int icon,String title,String subtitle,Runnable action){LinearLayout line=row();line.setPadding(0,dp(16),0,dp(16));line.setMinimumHeight(dp(68));FrameLayout tile=new FrameLayout(this);tile.setBackground(round(SOFT,12));ImageView image=AppIcons.view(this,icon,RED,22);tile.addView(image,new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER));line.addView(tile,new LinearLayout.LayoutParams(dp(42),dp(42)));line.addView(space(12));LinearLayout copy=column();copy.addView(text(title,14,TEXT));TextView sub=text(subtitle,11,MUTED);sub.setPadding(0,dp(4),0,0);copy.addView(sub);line.addView(copy,new LinearLayout.LayoutParams(0,-2,1));if(action!=null){line.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(palette.light?0x12000000:0x15ffffff),null,null));ImageView arrow=AppIcons.view(this,R.drawable.ui_external,MUTED,18);line.addView(arrow,new LinearLayout.LayoutParams(dp(18),dp(18)));line.setOnClickListener(v->action.run());line.setFocusable(true);line.setContentDescription(title+" "+subtitle);}parent.addView(line);}
  private void section(String title){LinearLayout line=row();TextView t=text(title,24,TEXT);t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);line.addView(t);View rule=new View(this);rule.setBackgroundColor(BORDER);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(1),1);rp.leftMargin=dp(14);line.addView(rule,rp);line.setPadding(0,dp(17),0,dp(12));results.addView(line);}
+ private String rating(Protocol.Item item){return item.rating>=0?" • "+String.format(Locale.ROOT,"%.1f",item.rating):"";}
  private ImageView cover(String url){ImageView image=new ImageView(this){@Override protected void onMeasure(int w,int h){int width=View.MeasureSpec.getSize(w);if(width<=0)width=dp(160);super.onMeasure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(width*9/16,View.MeasureSpec.EXACTLY));}};image.setLayoutParams(new LinearLayout.LayoutParams(-1,-2));image.setBackgroundColor(SOFT);image.setImageResource(R.drawable.rin_icon);image.setScaleType(ImageView.ScaleType.CENTER_CROP);image.setContentDescription("รูปปกผลงาน");images.load(url,image);return image;}
- private void showDetails(Protocol.Item item){startActivityForResult(new Intent(this,DetailsActivity.class)
-     .putExtra("id",item.id).putExtra("title",item.title)
-     .putExtra("newBadge",service!=null&&service.showsNewBadge(item.id)),52);}
+ private void showDetails(Protocol.Item item){startActivity(new Intent(this,DetailsActivity.class).putExtra("id",item.id).putExtra("title",item.title));}
  private String typeLabel(String s){switch(s){case "Addon":return "แอดออน";case "World":case "WorldTemplate":return "โลก";case "SkinPack":return "สกิน";case "TexturePack":case "ResourcePack":return "เท็กซ์เจอร์";default:return s;}}
  private void empty(String heading,String desc){LinearLayout c=card();c.setPadding(dp(20),dp(28),dp(20),dp(28));c.addView(text(heading,21,TEXT));TextView t=text(desc,13,MUTED);t.setPadding(0,dp(12),0,0);t.setLineSpacing(dp(4),1);c.addView(t);results.addView(c);}
  private void openPack(EngineService.Download d){
