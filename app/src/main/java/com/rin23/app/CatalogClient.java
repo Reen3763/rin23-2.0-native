@@ -68,6 +68,11 @@ final class CatalogClient {
   JSONObject entity=raw.optJSONObject("CreatorEntity");
   if(entity!=null)item.creatorId=entity.optString("Id","");
   item.id=id;item.publishedAt=releaseTime(raw.optString("StartDate"));
+  if(item.publishedAt==0)item.publishedAt=releaseTime(raw.optString("CreationDate"));
+  item.updatedAt=releaseTime(raw.optString("LastModifiedDate"));
+  JSONArray identities=dp==null?null:dp.optJSONArray("packIdentity");
+  JSONObject identity=identities==null?null:identities.optJSONObject(0);
+  if(identity!=null&&!identity.isNull("version"))item.version=identity.optString("version").trim();
   TreeMap<String,List<String>> groups=new TreeMap<>();JSONArray contents=raw.optJSONArray("Contents");
   if(contents!=null)for(int i=0;i<contents.length();i++){JSONObject c=contents.optJSONObject(i);if(c==null||!safeImageUrl(c.optString("Url")))continue;List<String> ts=new ArrayList<>();JSONArray ct=c.optJSONArray("Tags");if(ct!=null)for(int j=0;j<ct.length();j++)ts.add(ct.optString(j));Collections.sort(ts);String key=String.join("\u0001",ts);if(!groups.containsKey(key))groups.put(key,new ArrayList<>());groups.get(key).add(c.optString("Url"));}
   item.contentGroups.addAll(groups.values());item.description=localized(raw.opt("Description"));JSONObject rating=raw.optJSONObject("Rating");if(rating!=null){item.rating=rating.optDouble("Average",-1);item.ratingCount=rating.optInt("TotalCount",0);}
