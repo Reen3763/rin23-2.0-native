@@ -68,8 +68,73 @@ public final class MainActivity extends ThemeActivity implements EngineService.O
   }
  }
  private View welcome(){LinearLayout wrap=column();wrap.setPadding(0,dp(5),0,dp(16));FrameLayout banner=new FrameLayout(this);banner.setMinimumHeight(dp(164));banner.setBackground(round(PANEL,18));banner.setClipToOutline(true);ImageView art=new ImageView(this){@Override protected void onSizeChanged(int w,int h,int ow,int oh){super.onSizeChanged(w,h,ow,oh);android.graphics.drawable.Drawable d=getDrawable();if(d!=null){float scale=Math.max((float)w/d.getIntrinsicWidth(),(float)h/d.getIntrinsicHeight());android.graphics.Matrix m=new android.graphics.Matrix();m.setScale(scale,scale);m.postTranslate(w-d.getIntrinsicWidth()*scale,(h-d.getIntrinsicHeight()*scale)/2);setImageMatrix(m);}}};art.setScaleType(ImageView.ScaleType.MATRIX);art.setImageResource(R.drawable.rin_cover);banner.addView(art,new FrameLayout.LayoutParams(-1,-1));View shade=new View(this);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,new int[]{0xf20e0f13,0xd20e0f13,0x250e0f13}));banner.addView(shade,new FrameLayout.LayoutParams(-1,-1));LinearLayout overlay=row();overlay.setPadding(dp(18),dp(22),dp(16),dp(22));LinearLayout copy=column();TextView title=text("คุณสามารถโดเนทกำลังใจให้ Rin23 โดยการกดที่นี่ ขอบคุณครับ",16,Color.WHITE);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setLineSpacing(dp(4),1);copy.addView(title);TextView hint=text("สนับสนุนโดยสมัครใจ",11,0xffff8a81);hint.setPadding(0,dp(12),0,0);AppIcons.apply(hint,R.drawable.ui_heart,0xffff8a81,16);copy.addView(hint);overlay.addView(copy,new LinearLayout.LayoutParams(0,-2,1));overlay.addView(space(50));banner.addView(overlay,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER_VERTICAL));banner.setContentDescription("คุณสามารถโดเนทกำลังใจให้ Rin23 โดยการกดที่นี่ ขอบคุณครับ");banner.setOnClickListener(v->startActivity(new Intent(this,DonationActivity.class)));wrap.addView(banner,new LinearLayout.LayoutParams(-1,-2));Button discover=button(service!=null&&service.randomBusy?"กำลังสุ่ม…":"สุ่มหาอะไรเล่น",true);AppIcons.apply(discover,R.drawable.ui_random,ON_ACCENT,22);discover.setEnabled(service!=null&&service.canBrowse()&&!service.randomBusy);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(50));rp.topMargin=dp(14);wrap.addView(discover,rp);discover.setOnClickListener(v->randomMenu());TextView heading=text("สำรวจผลงาน",18,TEXT);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setPadding(0,dp(20),0,0);wrap.addView(heading);return wrap;}
- private View itemCard(Protocol.Item item){LinearLayout c=column();c.setBackground(round(PANEL,20));c.setClipToOutline(true);c.addView(packCover(item));LinearLayout copy=column();copy.setPadding(dp(12),dp(11),dp(12),dp(14));TextView title=text(item.title,14,TEXT);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setMaxLines(2);title.setMinLines(2);title.setLineSpacing(dp(2),1);title.setEllipsize(TextUtils.TruncateAt.END);copy.addView(title);TextView author=text(item.creator,11,MUTED);author.setSingleLine(true);author.setEllipsize(TextUtils.TruncateAt.END);copy.addView(author);TextView type=text(typeLabel(item.type)+rating(item),10,RED);type.setPadding(0,dp(8),0,0);copy.addView(type);c.addView(copy);c.setOnClickListener(v->showDetails(item));return c;}
- private View packCover(Protocol.Item item){FrameLayout frame=new FrameLayout(this);frame.addView(cover(item.imageUrl));if(!item.available&&!tab.equals("favorites")){TextView shade=text("ไม่พร้อมใช้งาน รอแป๊บ",11,Color.WHITE);shade.setGravity(Gravity.CENTER);shade.setPadding(dp(8),dp(8),dp(8),dp(8));shade.setBackgroundColor(0xc4111115);frame.addView(shade,new FrameLayout.LayoutParams(-1,-1));}if(CatalogClient.isNew(item,System.currentTimeMillis())){TextView badge=text("ใหม่",10,0xff21100f);badge.setTypeface(Typeface.DEFAULT,Typeface.BOLD);badge.setPadding(dp(9),dp(3),dp(9),dp(3));badge.setBackground(round(0xfff0d9a8,7));FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.LEFT);lp.leftMargin=dp(8);lp.topMargin=dp(8);frame.addView(badge,lp);}Button save=button("",false);save.setPadding(dp(10),dp(10),dp(10),dp(10));paintFavorite(save,item.id);save.setOnClickListener(v->toggleFavorite(item));FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(dp(44),dp(44),Gravity.TOP|Gravity.RIGHT);sp.topMargin=dp(5);sp.rightMargin=dp(5);frame.addView(save,sp);return frame;}
+ private View itemCard(Protocol.Item item) {
+  LinearLayout card = column();
+  GradientDrawable surface = round(PANEL, 20);
+  surface.setStroke(dp(1), BORDER);
+  AppIcons.ripple(card, surface);
+  card.setClipToOutline(true);
+  card.setFocusable(true);
+  card.addView(packCover(item));
+
+  LinearLayout copy = column();
+  copy.setPadding(dp(12), dp(12), dp(12), dp(14));
+  TextView title = text(item.title, 15, TEXT);
+  title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+  title.setMinLines(2);
+  title.setMaxLines(2);
+  title.setLineSpacing(dp(2), 1);
+  title.setEllipsize(TextUtils.TruncateAt.END);
+  copy.addView(title);
+
+  TextView author = text(item.creator, 12, MUTED);
+  author.setSingleLine(true);
+  author.setEllipsize(TextUtils.TruncateAt.END);
+  copy.addView(author);
+
+  LinearLayout metadata = row();
+  metadata.setPadding(0, dp(9), 0, 0);
+  TextView category = text(typeLabel(item.type), 11, RED);
+  category.setMaxLines(1);
+  category.setEllipsize(TextUtils.TruncateAt.END);
+  metadata.addView(category, new LinearLayout.LayoutParams(0, -2, 1));
+  if (item.rating >= 0) {
+   TextView score = text(String.format(Locale.ROOT, "%.1f", item.rating), 11, TEXT);
+   AppIcons.apply(score, R.drawable.ui_star, palette.star, 12);
+   score.setContentDescription("คะแนน " + score.getText());
+   metadata.addView(score);
+  }
+  copy.addView(metadata);
+  card.addView(copy);
+  card.setOnClickListener(v -> showDetails(item));
+  return card;
+ }
+
+ private View packCover(Protocol.Item item) {
+  FrameLayout frame = new FrameLayout(this);
+  frame.addView(cover(item.imageUrl));
+  if (!item.available && !tab.equals("favorites")) {
+   TextView shade = text("ไม่พร้อมใช้งาน รอแป๊บ", 11, Color.WHITE);
+   shade.setGravity(Gravity.CENTER);
+   shade.setPadding(dp(8), dp(8), dp(8), dp(8));
+   shade.setBackgroundColor(0xc4111115);
+   frame.addView(shade, new FrameLayout.LayoutParams(-1, -1));
+  }
+  NewReleaseBadge badge = new NewReleaseBadge(this);
+  badge.bind(item);
+  frame.addView(badge);
+
+  Button save = button("", false);
+  save.setPadding(dp(12), dp(12), dp(12), dp(12));
+  paintFavorite(save, item.id);
+  save.setOnClickListener(v -> toggleFavorite(item));
+  FrameLayout.LayoutParams position =
+      new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP | Gravity.END);
+  position.topMargin = dp(5);
+  position.setMarginEnd(dp(5));
+  frame.addView(save, position);
+  return frame;
+ }
  private View favoritesHeader(){LinearLayout wrap=column();wrap.setPadding(0,dp(12),0,dp(16));TextView title=text("รายการโปรด",24,TEXT);AppIcons.apply(title,R.drawable.ui_bookmark_saved,RED,24);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);wrap.addView(title);TextView hint=text(savedItems.isEmpty()?"แตะไอคอนคั่นหน้าบนผลงานเพื่อเก็บไว้ดูภายหลัง":"เก็บไว้แล้ว "+savedItems.size()+" ผลงาน • แตะเพื่อดูรายละเอียด",12,MUTED);hint.setPadding(0,dp(8),0,dp(8));wrap.addView(hint);if(savedItems.isEmpty()){ImageView icon=AppIcons.view(this,R.drawable.ui_bookmark,RED,48);LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(dp(64),dp(64));ip.gravity=Gravity.CENTER_HORIZONTAL;ip.topMargin=dp(32);ip.bottomMargin=dp(16);wrap.addView(icon,ip);}return wrap;}
  private void paintFavorite(Button button,String id){boolean saved=favorites!=null&&favorites.contains(id);AppIcons.apply(button,saved?R.drawable.ui_bookmark_saved:R.drawable.ui_bookmark,saved?RED:TEXT,22);button.setContentDescription(saved?"นำออกจากรายการโปรด":"เก็บในรายการโปรด");button.setEnabled(favorites!=null&&!FavoriteStore.key(id).isEmpty());}
  private void toggleFavorite(Protocol.Item item){if(favorites==null)return;try{boolean saved=favorites.toggle(item);savedItems=favorites.items();browseAdapter.notifyDataSetChanged();Toast.makeText(this,saved?"เก็บในรายการโปรดแล้ว":"นำออกจากรายการโปรดแล้ว",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"บันทึกรายการโปรดไม่ได้ กรุณาลองใหม่",Toast.LENGTH_LONG).show();}}
@@ -93,7 +158,6 @@ public final class MainActivity extends ThemeActivity implements EngineService.O
  }
  private void settingRow(LinearLayout parent,int icon,String title,String subtitle,Runnable action){LinearLayout line=row();line.setPadding(0,dp(16),0,dp(16));line.setMinimumHeight(dp(68));FrameLayout tile=new FrameLayout(this);tile.setBackground(round(SOFT,12));ImageView image=AppIcons.view(this,icon,RED,22);tile.addView(image,new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER));line.addView(tile,new LinearLayout.LayoutParams(dp(42),dp(42)));line.addView(space(12));LinearLayout copy=column();copy.addView(text(title,14,TEXT));TextView sub=text(subtitle,11,MUTED);sub.setPadding(0,dp(4),0,0);copy.addView(sub);line.addView(copy,new LinearLayout.LayoutParams(0,-2,1));if(action!=null){line.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(palette.light?0x12000000:0x15ffffff),null,null));ImageView arrow=AppIcons.view(this,R.drawable.ui_external,MUTED,18);line.addView(arrow,new LinearLayout.LayoutParams(dp(18),dp(18)));line.setOnClickListener(v->action.run());line.setFocusable(true);line.setContentDescription(title+" "+subtitle);}parent.addView(line);}
  private void section(String title){LinearLayout line=row();TextView t=text(title,24,TEXT);t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);line.addView(t);View rule=new View(this);rule.setBackgroundColor(BORDER);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,dp(1),1);rp.leftMargin=dp(14);line.addView(rule,rp);line.setPadding(0,dp(17),0,dp(12));results.addView(line);}
- private String rating(Protocol.Item item){return item.rating>=0?" • "+String.format(Locale.ROOT,"%.1f",item.rating):"";}
  private ImageView cover(String url){ImageView image=new ImageView(this){@Override protected void onMeasure(int w,int h){int width=View.MeasureSpec.getSize(w);if(width<=0)width=dp(160);super.onMeasure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(width*9/16,View.MeasureSpec.EXACTLY));}};image.setLayoutParams(new LinearLayout.LayoutParams(-1,-2));image.setBackgroundColor(SOFT);image.setImageResource(R.drawable.rin_icon);image.setScaleType(ImageView.ScaleType.CENTER_CROP);image.setContentDescription("รูปปกผลงาน");images.load(url,image);return image;}
  private void showDetails(Protocol.Item item){startActivity(new Intent(this,DetailsActivity.class).putExtra("id",item.id).putExtra("title",item.title));}
  private String typeLabel(String s){switch(s){case "Addon":return "แอดออน";case "World":case "WorldTemplate":return "โลก";case "SkinPack":return "สกิน";case "TexturePack":case "ResourcePack":return "เท็กซ์เจอร์";default:return s;}}
